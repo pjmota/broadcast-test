@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(clientId) {
+      return request.auth.uid == clientId;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /connections/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.clientId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.clientId);
+    }
+
+    match /contacts/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.clientId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.clientId);
+    }
+
+    match /messages/{docId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.clientId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.clientId);
+    }
+  }
+}
