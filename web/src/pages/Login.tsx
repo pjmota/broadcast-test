@@ -16,6 +16,8 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,10 +27,72 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { currentUser } = useAuth();
+
+  // Redireciona se já estiver logado
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
+
+  // Função auxiliar para traduzir erros do Firebase
+  const getAuthErrorMessage = (errorCode: string) => {
+    switch (errorCode) {
+      case 'auth/email-already-in-use':
+        return 'Este e-mail já está em uso por outra conta.';
+      case 'auth/invalid-email':
+        return 'O endereço de e-mail é inválido.';
+      case 'auth/weak-password':
+        return 'A senha deve ter pelo menos 6 caracteres.';
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        return 'E-mail ou senha incorretos.';
+      case 'auth/too-many-requests':
+        return 'Muitas tentativas falhas. Tente novamente mais tarde.';
+      default:
+        return 'Ocorreu um erro ao tentar autenticar. Tente novamente.';
+    }
+  };
+
+  // Função auxiliar para validar email simples
+  const validateEmail = (email: string) => {
+    return /\S+@\S+\.\S+/.test(email);
+  };
+
+  // Função auxiliar para validar senha forte
+  const validatePassword = (pass: string) => {
+    if (pass.length < 8) return 'A senha deve ter pelo menos 8 caracteres.';
+    if (!/[A-Z]/.test(pass)) return 'A senha deve conter pelo menos uma letra maiúscula.';
+    if (!/[0-9]/.test(pass)) return 'A senha deve conter pelo menos um número.';
+    // Opcional: caracteres especiais
+    // if (!/[!@#$%^&*]/.test(pass)) return 'A senha deve conter pelo menos um caractere especial.';
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validação de e-mail (para Login e Cadastro)
+    if (!validateEmail(email)) {
+      const msg = 'Por favor, insira um endereço de e-mail válido.';
+      setError(msg);
+      showToast(msg, 'error');
+      return;
+    }
+
+    // Validação de senha forte apenas no cadastro (opcional no login, mas bom ter)
+    if (!isLogin) {
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        setError(passwordError);
+        showToast(passwordError, 'error');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -50,7 +114,7 @@ export default function Login() {
       navigate('/');
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.message || 'Falha na autenticação';
+      const errorMessage = getAuthErrorMessage(err.code);
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
