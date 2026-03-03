@@ -26,14 +26,19 @@ export function useConnectionsLogic() {
       const unsubscribe = connectionsService.subscribe(currentUser.uid, (data) => {
         setConnections(data);
         setLoading(false);
+      }, (error) => {
+        console.error("Erro ao buscar conexões:", error);
+        setLoading(false);
       });
       return () => unsubscribe();
+    } else {
+      setLoading(false);
     }
   }, [currentUser]);
 
   const handleSelectConnection = (connection: Connection) => {
     selectConnection(connection);
-    navigate('/contacts');
+    navigate('/messages');
   };
 
   const handleOpenDialog = (connection?: Connection) => {

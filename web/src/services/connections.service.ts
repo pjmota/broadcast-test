@@ -32,7 +32,7 @@ export const connectionsService = {
   },
 
   // Listar conexões do usuário (Real-time)
-  subscribe: (userId: string, callback: (connections: Connection[]) => void) => {
+  subscribe: (userId: string, callback: (connections: Connection[]) => void, onError?: (error: any) => void) => {
     const q = query(
       collection(db, COLLECTION_NAME),
       where('userId', '==', userId)
@@ -46,6 +46,9 @@ export const connectionsService = {
         } as Connection))
         .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
       callback(connections);
+    }, (error) => {
+      if (onError) onError(error);
+      else console.error("Firestore subscription error:", error);
     });
   },
 

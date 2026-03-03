@@ -27,7 +27,7 @@ export function useMessagesLogic() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState<MessageStatus>('sent');
+  const [currentTab, setCurrentTab] = useState<MessageStatus>('sent'); // Mantendo por compatibilidade temporária, mas não filtrará mais
   
   // Connection selection state
   const [availableConnections, setAvailableConnections] = useState<Connection[]>([]);
@@ -70,19 +70,10 @@ export function useMessagesLogic() {
         setContacts(data);
       });
       
-      // Check for scheduled messages every minute
-      const interval = setInterval(() => {
-        checkScheduledMessages();
-      }, 60000);
-
-      // Initial check
-      checkScheduledMessages();
-      
       return () => {
         if (unsubscribeConnections) unsubscribeConnections();
         if (unsubscribeMessages) unsubscribeMessages();
         if (unsubscribeContacts) unsubscribeContacts();
-        clearInterval(interval);
       };
     } 
     
@@ -136,7 +127,7 @@ export function useMessagesLogic() {
   // Filter conversations based on current tab and search term
   const filteredConversations = useMemo(() => {
     const filtered = conversations.filter(conv => {
-      // Tab filter
+      // Tab filter: only show conversations that have messages of the current tab type
       if (currentTab === 'sent' && !conv.hasSent) return false;
       if (currentTab === 'scheduled' && !conv.hasScheduled) return false;
 
@@ -175,6 +166,9 @@ export function useMessagesLogic() {
     if (!conversation) return null;
 
     // Filter messages based on active tab
+    // Se a aba for 'scheduled', mostramos apenas as agendadas.
+    // Se a aba for 'sent', mostramos apenas as enviadas (ou todas que não são scheduled?).
+    // O usuário reclamou de ver mensagens enviadas na aba agendadas.
     const filteredMessages = conversation.messages.filter(msg => 
       msg.status === currentTab
     );
@@ -271,18 +265,6 @@ export function useMessagesLogic() {
     setScheduledDate('');
   };
 
-  const checkScheduledMessages = async () => {
-    if (!currentUser || !currentConnection) return;
-    try {
-      const processedCount = await messagesService.processScheduledMessages(currentUser.uid);
-      if (processedCount > 0) {
-        showToast(`${processedCount} mensagens agendadas foram enviadas`, 'info');
-      }
-    } catch (error) {
-      console.error('Error processing scheduled messages:', error);
-    }
-  };
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: MessageStatus) => {
     setCurrentTab(newValue);
     setSelectedConversationId(null);
@@ -319,7 +301,15 @@ export function useMessagesLogic() {
   // Helper to select a specific message for editing (called from ChatArea bubbles)
   const handleSelectMessageForEdit = (msg: Message) => {
      setSelectedMessage(msg);
-     handleEditMessage(); // Pre-fill form
+     // Directly set state here instead of calling handleEditMessage which relies on stale state
+     setContentInput(msg.content);
+     if (msg.scheduledAt) {
+       const date = msg.scheduledAt.toDate();
+       const isoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+       setScheduledDate(isoString);
+     }
+     setIsEditing(true);
+     setIsCreating(false);
   };
 
   const handleSubmit = async () => {

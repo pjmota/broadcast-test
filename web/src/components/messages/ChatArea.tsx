@@ -21,7 +21,9 @@ import {
   Send as SendIcon,
   Laptop as LaptopIcon,
   Save as SaveIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  DoneAll as DoneAllIcon,
+  Check as CheckIcon
 } from '@mui/icons-material';
 import { type Message } from '../../services/messages.service';
 import { type Contact } from '../../services/contacts.service';
@@ -221,7 +223,8 @@ export default function ChatArea({
                  {msg.content}
                </Typography>
                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
-                  {msg.status === 'scheduled' && <AccessTimeIcon sx={{ fontSize: 12, color: 'text.secondary' }} />}
+                  {msg.status === 'scheduled' && <AccessTimeIcon sx={{ fontSize: 14, color: 'text.secondary' }} />}
+                  {msg.status === 'sent' && <DoneAllIcon sx={{ fontSize: 14, color: '#4fc3f7' }} />}
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                     {msg.scheduledAt 
                       ? msg.scheduledAt.toDate().toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })

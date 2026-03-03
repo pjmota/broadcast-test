@@ -15,18 +15,18 @@ service cloud.firestore {
     }
 
     match /connections/{docId} {
-      allow read, write: if isAuthenticated() && isOwner(resource.data.clientId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.clientId);
+      allow read, write: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
     }
 
     match /contacts/{docId} {
-      allow read, write: if isAuthenticated() && isOwner(resource.data.clientId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.clientId);
+      allow read, write: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
     }
 
     match /messages/{docId} {
-      allow read, write: if isAuthenticated() && isOwner(resource.data.clientId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.clientId);
+      allow read, write: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
     }
   }
 }

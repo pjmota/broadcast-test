@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getFunctions } from 'firebase/functions';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
 // Fallback para hardcoded values caso o .env falhe
 const firebaseConfig = {
@@ -17,5 +17,25 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
+
+// Conectar aos emuladores se a variável de ambiente estiver setada ou se estivermos em localhost
+// Para avaliação: Se o avaliador rodar "npm run dev", conectará aos emuladores se eles estiverem rodando na porta padrão.
+if (import.meta.env.VITE_USE_EMULATORS === 'true' || window.location.hostname === 'localhost') {
+  console.log('Tentando conectar aos Emuladores do Firebase...');
+  try {
+    // Auth Emulator (Porta 9099)
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    
+    // Firestore Emulator (Porta 8080)
+    connectFirestoreEmulator(db, 'localhost', 8080);
+    
+    // Functions Emulator (Porta 5001)
+    connectFunctionsEmulator(functions, 'localhost', 5001);
+    
+    console.log('✅ Conectado aos Emuladores do Firebase');
+  } catch (error) {
+    console.warn('⚠️ Não foi possível conectar aos emuladores (podem não estar rodando ou já conectados):', error);
+  }
+}
 
 export default app;

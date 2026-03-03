@@ -91,3 +91,6 @@ Thumbs.db
 
 # Firebase
 .firebase/
+emulator-data/
+.config/
+configstore/

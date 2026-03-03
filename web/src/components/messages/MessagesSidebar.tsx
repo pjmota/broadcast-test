@@ -104,7 +104,8 @@ export default function MessagesSidebar({
                 divider
                 sx={{ 
                   alignItems: 'flex-start',
-                  '&.Mui-selected': { bgcolor: '#f0f2f5' }
+                  '&.Mui-selected': { bgcolor: '#b8d1f7' },
+                  '&.Mui-selected:hover': { bgcolor: '#a6c0e6' }
                 }}
               >
                 <ListItemText
