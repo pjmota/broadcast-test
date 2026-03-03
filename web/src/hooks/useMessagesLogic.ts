@@ -200,12 +200,24 @@ export function useMessagesLogic() {
         
         if (action === 'schedule') {
           setCurrentTab('scheduled');
-          setSelectedConversationId(null);
+          
+          // Check if conversation exists
+          const conversationKey = [contactId].sort().join(',');
+          const exists = conversations.find(c => c.id === conversationKey);
+
+          if (exists) {
+            setSelectedConversationId(conversationKey);
+            setIsCreating(false);
+            setSelectedContacts(exists.contactIds);
+          } else {
+            setSelectedConversationId(null);
+            setIsCreating(true);
+            setSelectedContacts([contactId]);
+          }
+
           setSelectedMessage(null);
-          setIsCreating(true);
           setIsEditing(false);
           setContentInput('');
-          setSelectedContacts([contactId]);
           
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
