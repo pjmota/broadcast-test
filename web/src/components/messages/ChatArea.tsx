@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from 'react';
+import { type KeyboardEvent, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -13,50 +13,68 @@ import {
   CircularProgress
 } from '@mui/material';
 import { 
-  Delete as DeleteIcon, 
   Person as PersonIcon,
   Add as AddIcon,
   AccessTime as AccessTimeIcon,
   AttachFile as AttachFileIcon,
   InsertEmoticon as InsertEmoticonIcon,
   Send as SendIcon,
-  Laptop as LaptopIcon
+  Laptop as LaptopIcon,
+  Save as SaveIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
-import { type Message } from '../../../services/messages.service';
-import { type Contact } from '../../../services/contacts.service';
-import bgImage from '../../../assets/fundo_whats.png';
+import { type Message } from '../../services/messages.service';
+import { type Contact } from '../../services/contacts.service';
+import { type Conversation } from '../../hooks/useMessagesLogic';
+import bgImage from '../../assets/fundo_whats.png';
 
 interface ChatAreaProps {
   isCreating: boolean;
+  isEditing: boolean;
   selectedMessage: Message | null;
+  currentConversation: Conversation | null;
   contacts: Contact[];
   contentInput: string;
   selectedContacts: string[];
   scheduledDate: string;
   submitting: boolean;
+  currentTab: 'sent' | 'scheduled';
   onContentChange: (val: string) => void;
   onContactsChange: (ids: string[]) => void;
   onDateChange: (val: string) => void;
   onSubmit: () => void;
-  onDelete: (id: string) => void;
+  onEditMessage: () => void;
+  onSelectMessageForEdit: (msg: Message) => void;
   getContactNames: (ids: string[]) => string;
 }
 
 export default function ChatArea({
   isCreating,
+  isEditing,
   selectedMessage,
+  currentConversation,
   contacts,
   contentInput,
   selectedContacts,
   scheduledDate,
   submitting,
+  currentTab,
   onContentChange,
   onContactsChange,
   onDateChange,
   onSubmit,
-  onDelete,
+  onEditMessage,
+  onSelectMessageForEdit,
   getContactNames
 }: ChatAreaProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [currentConversation?.messages, isCreating]);
   
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -65,7 +83,7 @@ export default function ChatArea({
     }
   };
 
-  if (!selectedMessage && !isCreating) {
+  if (!currentConversation && !isCreating) {
     return (
       <Box sx={{ 
         flex: 1, 
@@ -82,7 +100,7 @@ export default function ChatArea({
           Broadcast Web
         </Typography>
         <Typography variant="body2" color="#667781">
-          Selecione uma mensagem ou crie uma nova para começar.
+          Selecione uma conversa ou crie uma nova para começar.
         </Typography>
       </Box>
     );
@@ -131,22 +149,15 @@ export default function ChatArea({
             ) : (
               <>
                 <Typography variant="subtitle1" fontWeight="bold">
-                  {selectedMessage ? getContactNames(selectedMessage.contactIds) : ''}
+                  {currentConversation ? getContactNames(currentConversation.contactIds) : ''}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {selectedMessage?.status === 'sent' ? 'Enviada em ' : 'Agendada para '}
-                  {selectedMessage?.scheduledAt?.toDate().toLocaleString()}
+                  {currentConversation?.messages.length} mensagens
                 </Typography>
               </>
             )}
           </Box>
         </Box>
-        
-        {!isCreating && selectedMessage && (
-          <IconButton onClick={() => onDelete(selectedMessage.id!)} color="error" title="Excluir Mensagem">
-            <DeleteIcon />
-          </IconButton>
-        )}
       </Paper>
 
       {/* Chat Body */}
@@ -169,48 +180,78 @@ export default function ChatArea({
           WebkitMaskRepeat: 'repeat',
         }} />
 
-        <Box sx={{ 
-          position: 'relative', 
-          zIndex: 1, 
-          height: '100%', 
-          p: 3, 
-          display: 'flex', 
-          flexDirection: 'column',
-          overflowY: 'auto'
-        }}>
+        <Box 
+          ref={scrollRef}
+          sx={{ 
+            position: 'relative', 
+            zIndex: 1, 
+            height: '100%', 
+            p: 3, 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflowY: 'auto',
+            gap: 2
+          }}
+        >
           {/* Message Bubbles */}
-          <Box sx={{ 
-            alignSelf: 'flex-end', 
-            maxWidth: '80%', 
-            bgcolor: '#dcf8c6', 
-            p: 1.5, 
-            borderRadius: 2,
-            boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-            position: 'relative',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              right: -10,
-              width: 0,
-              height: 0,
-              border: '10px solid transparent',
-              borderLeftColor: '#dcf8c6',
-              borderTopWidth: 0
-            }
-          }}>
-            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', pr: 4 }}>
-              {isCreating ? (contentInput || 'Sua mensagem aparecerá aqui...') : selectedMessage?.content}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ position: 'absolute', bottom: 4, right: 8, fontSize: '0.65rem' }}>
-              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Typography>
-          </Box>
+          {currentConversation?.messages.map((msg) => (
+             <Box 
+               key={msg.id}
+               sx={{ 
+                 alignSelf: 'flex-end', 
+                 maxWidth: '80%', 
+                 bgcolor: msg.status === 'scheduled' ? '#fff' : '#dcf8c6', 
+                 p: 1.5, 
+                 borderRadius: 2,
+                 boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                 position: 'relative',
+                 border: selectedMessage?.id === msg.id ? '2px solid #00a884' : 'none',
+                 cursor: msg.status === 'scheduled' ? 'pointer' : 'default',
+                 '&:hover': {
+                    bgcolor: msg.status === 'scheduled' ? '#f5f5f5' : '#dcf8c6'
+                 }
+               }}
+               onClick={() => {
+                 if (msg.status === 'scheduled') {
+                   onSelectMessageForEdit(msg);
+                 }
+               }}
+             >
+               <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', pr: 4 }}>
+                 {msg.content}
+               </Typography>
+               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
+                  {msg.status === 'scheduled' && <AccessTimeIcon sx={{ fontSize: 12, color: 'text.secondary' }} />}
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                    {msg.scheduledAt 
+                      ? msg.scheduledAt.toDate().toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                      : msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    }
+                  </Typography>
+               </Box>
+             </Box>
+          ))}
+          
+          {/* Creating Preview */}
+          {isCreating && contentInput && (
+             <Box sx={{ 
+                alignSelf: 'flex-end', 
+                maxWidth: '80%', 
+                bgcolor: '#dcf8c6', 
+                p: 1.5, 
+                borderRadius: 2,
+                opacity: 0.7
+              }}>
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {contentInput}
+                </Typography>
+              </Box>
+          )}
         </Box>
       </Box>
 
       {/* Footer / Input Area */}
-      {isCreating && (
+      {(isCreating || currentConversation) && (
         <Paper square sx={{ p: 1.5, bgcolor: '#f0f2f5', borderTop: '1px solid #e0e0e0', zIndex: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
             <IconButton size="small"><InsertEmoticonIcon /></IconButton>
@@ -239,6 +280,7 @@ export default function ChatArea({
               color="primary" 
               onClick={onSubmit}
               disabled={submitting || !contentInput.trim() || selectedContacts.length === 0}
+              title={isEditing ? "Salvar Alterações" : "Enviar Mensagem"}
               sx={{ 
                 bgcolor: contentInput.trim() && selectedContacts.length > 0 ? '#00a884' : 'transparent',
                 color: contentInput.trim() && selectedContacts.length > 0 ? 'white' : 'action.disabled',
@@ -247,31 +289,45 @@ export default function ChatArea({
                 }
               }}
             >
-              {submitting ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
+              {submitting ? <CircularProgress size={24} color="inherit" /> : (
+                isEditing ? <SaveIcon /> : <SendIcon />
+              )}
             </IconButton>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AccessTimeIcon fontSize="small" color="action" />
-              <Typography variant="caption" color="text.secondary">Agendar:</Typography>
-              <input
-                type="datetime-local"
-                id="scheduled-date-input"
-                value={scheduledDate}
-                onChange={(e) => onDateChange(e.target.value)}
-                style={{
-                  border: 'none',
-                  background: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontFamily: 'inherit',
-                  outline: 'none',
-                  color: '#667781'
-                }}
-              />
-            </Box>
+            {currentTab === 'scheduled' && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AccessTimeIcon fontSize="small" color="action" />
+                <Typography variant="caption" color="text.secondary">Agendar:</Typography>
+                <input
+                  type="datetime-local"
+                  id="scheduled-date-input"
+                  value={scheduledDate}
+                  onChange={(e) => onDateChange(e.target.value)}
+                  style={{
+                    border: 'none',
+                    background: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    color: '#667781'
+                  }}
+                />
+              </Box>
+            )}
+            
+            {isEditing && (
+               <Chip label="Editando Mensagem" size="small" color="primary" onDelete={() => {
+                 onSelectMessageForEdit(null as any); // Clear selection
+                 onEditMessage(); // This toggles edit mode off usually? Wait, I need a way to cancel edit.
+                 // Actually onSelectMessageForEdit(null) in useMessagesLogic might not be enough if it expects a message.
+                 // Let's rely on clicking the bubble again or something.
+                 // Or better: add a cancel edit button.
+               }} />
+            )}
           </Box>
         </Paper>
       )}

@@ -144,5 +144,25 @@ export const messagesService = {
     }
     
     return count;
+  },
+
+  // Buscar última mensagem individual com um contato
+  getLastMessageWithContact: async (userId: string, connectionId: string, contactId: string) => {
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('userId', '==', userId),
+      where('connectionId', '==', connectionId),
+      where('contactIds', 'array-contains', contactId)
+    );
+
+    const snapshot = await getDocs(q);
+    
+    // Filtrar no cliente por mensagens individuais (tamanho 1) e ordenar por data
+    const individualMessages = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as Message))
+      .filter(msg => msg.contactIds.length === 1 && msg.contactIds[0] === contactId)
+      .sort((a, b) => b.scheduledAt.toMillis() - a.scheduledAt.toMillis());
+
+    return individualMessages.length > 0 ? individualMessages[0] : null;
   }
 };

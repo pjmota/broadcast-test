@@ -18,44 +18,38 @@ import {
   Schedule as ScheduleIcon, 
   Search as SearchIcon
 } from '@mui/icons-material';
-import { type Message, type MessageStatus } from '../../../services/messages.service';
-import { type Contact } from '../../../services/contacts.service';
+import { type MessageStatus } from '../../services/messages.service';
+import { type Contact } from '../../services/contacts.service';
+import { type Conversation } from '../../hooks/useMessagesLogic';
 
 interface MessagesSidebarProps {
-  messages: Message[];
+  conversations: Conversation[];
   contacts: Contact[];
   loading: boolean;
-  selectedMessage: Message | null;
+  selectedConversationId: string | null;
   currentTab: MessageStatus;
   searchTerm: string;
   onTabChange: (event: React.SyntheticEvent, newValue: MessageStatus) => void;
   onSearchChange: (term: string) => void;
   onCreateNew: () => void;
-  onSelectMessage: (msg: Message) => void;
+  onSelectConversation: (conversation: Conversation) => void;
   getContactNames: (ids: string[]) => string;
 }
 
 export default function MessagesSidebar({
-  messages,
+  conversations,
   contacts,
   loading,
-  selectedMessage,
+  selectedConversationId,
   currentTab,
   searchTerm,
   onTabChange,
   onSearchChange,
   onCreateNew,
-  onSelectMessage,
+  onSelectConversation,
   getContactNames
 }: MessagesSidebarProps) {
   
-  const filteredMessages = messages.filter(msg => {
-    const contactNames = getContactNames(msg.contactIds).toLowerCase();
-    const content = msg.content.toLowerCase();
-    const search = searchTerm.toLowerCase();
-    return contactNames.includes(search) || content.includes(search);
-  });
-
   return (
     <Paper sx={{ width: 350, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e0e0e0', zIndex: 1 }}>
         <Box sx={{ p: 2, bgcolor: '#f0f2f5' }}>
@@ -68,7 +62,7 @@ export default function MessagesSidebar({
           <TextField
             fullWidth
             size="small"
-            placeholder="Buscar mensagens..."
+            placeholder="Buscar conversas..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             InputProps={{
@@ -97,16 +91,16 @@ export default function MessagesSidebar({
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
             </Box>
-          ) : filteredMessages.length === 0 ? (
+          ) : conversations.length === 0 ? (
             <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-              Nenhuma mensagem encontrada.
+              Nenhuma conversa encontrada.
             </Typography>
           ) : (
-            filteredMessages.map((msg) => (
+            conversations.map((conv) => (
               <ListItemButton 
-                key={msg.id}
-                selected={selectedMessage?.id === msg.id}
-                onClick={() => onSelectMessage(msg)}
+                key={conv.id}
+                selected={selectedConversationId === conv.id}
+                onClick={() => onSelectConversation(conv)}
                 divider
                 sx={{ 
                   alignItems: 'flex-start',
@@ -117,16 +111,19 @@ export default function MessagesSidebar({
                   primary={
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                       <Typography variant="subtitle2" noWrap sx={{ maxWidth: '70%', fontWeight: 'bold' }}>
-                        {getContactNames(msg.contactIds)}
+                        {getContactNames(conv.contactIds)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                        {msg.scheduledAt?.toDate().toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })}
+                        {conv.lastMessage.scheduledAt 
+                          ? conv.lastMessage.scheduledAt.toDate().toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })
+                          : conv.lastMessage.createdAt.toDate().toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })
+                        }
                       </Typography>
                     </Box>
                   }
                   secondary={
                     <Typography variant="body2" color="text.secondary" noWrap>
-                      {msg.content}
+                      {conv.lastMessage.content}
                     </Typography>
                   }
                 />
