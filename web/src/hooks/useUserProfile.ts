@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { db } from '../services/firebase';
+import { useAuth } from '../app/providers/AuthProvider';
 
 export interface UserProfile {
   id: string;

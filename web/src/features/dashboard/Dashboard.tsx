@@ -1,24 +1,13 @@
-import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { AppBar, Toolbar, Typography, Button, Container, Paper, Grid } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { Typography, Button, Container, Paper, Grid, Box } from '@mui/material';
 
 export default function Dashboard() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Broadcast SaaS
-          </Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>
-            {currentUser?.email}
-          </Typography>
-          <Button color="inherit" onClick={logout}>Sair</Button>
-        </Toolbar>
-      </AppBar>
-
+    <div className="bg-gray-100 h-full">
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Grid container spacing={3}>
           <Grid size={12}>
@@ -29,6 +18,11 @@ export default function Dashboard() {
               <Typography component="p" variant="body1">
                 Você está autenticado e seus dados estão seguros no Firestore com isolamento por Client ID.
               </Typography>
+              <Box sx={{ mt: 3 }}>
+                <Button variant="contained" onClick={() => navigate('/connections')}>
+                  Gerenciar Conexões
+                </Button>
+              </Box>
               <Typography variant="caption" display="block" gutterBottom sx={{ mt: 2 }}>
                 Client ID (UID): {currentUser?.uid}
               </Typography>

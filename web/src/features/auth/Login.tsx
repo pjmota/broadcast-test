@@ -1,10 +1,4 @@
-import React, { useState } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword 
-} from 'firebase/auth';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Button, 
@@ -15,9 +9,9 @@ import {
   Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useEffect } from 'react';
+import { useToast } from '../../app/providers/ToastProvider';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { authService } from '../../services/auth.service';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -35,26 +29,6 @@ export default function Login() {
       navigate('/');
     }
   }, [currentUser, navigate]);
-
-  // Função auxiliar para traduzir erros do Firebase
-  const getAuthErrorMessage = (errorCode: string) => {
-    switch (errorCode) {
-      case 'auth/email-already-in-use':
-        return 'Este e-mail já está em uso por outra conta.';
-      case 'auth/invalid-email':
-        return 'O endereço de e-mail é inválido.';
-      case 'auth/weak-password':
-        return 'A senha deve ter pelo menos 6 caracteres.';
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        return 'E-mail ou senha incorretos.';
-      case 'auth/too-many-requests':
-        return 'Muitas tentativas falhas. Tente novamente mais tarde.';
-      default:
-        return 'Ocorreu um erro ao tentar autenticar. Tente novamente.';
-    }
-  };
 
   // Função auxiliar para validar email simples
   const validateEmail = (email: string) => {
@@ -97,24 +71,16 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await authService.login(email, password);
         showToast('Login realizado com sucesso!', 'success');
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Create user document in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          id: user.uid,
-          email: user.email,
-          createdAt: Timestamp.now()
-        });
+        await authService.register(email, password);
         showToast('Conta criada com sucesso!', 'success');
       }
       navigate('/');
     } catch (err: any) {
       console.error(err);
-      const errorMessage = getAuthErrorMessage(err.code);
+      const errorMessage = authService.getErrorMessage(err);
       setError(errorMessage);
       showToast(errorMessage, 'error');
     } finally {
